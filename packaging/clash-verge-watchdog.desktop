@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=Clash Verge 监控器
+Name[en]=Clash Verge Watchdog
+Name[zh_CN]=Clash Verge 监控器
+Comment=持续监控当前代理节点并执行有限自动恢复
+Comment[en]=Monitor the selected proxy and perform bounded recovery
+Exec=clash-verge-watchdog
+TryExec=/usr/bin/clash-verge-watchdog
+Icon=clash-verge-watchdog
+Terminal=false
+StartupNotify=false
+StartupWMClass=Clash-verge-watchdog
+Categories=Network;Utility;
