@@ -21,6 +21,12 @@ class _Cancellation:
         return any(event.is_set() for event in self.events)
 
 
+RECOVERY_HOURLY_LIMIT = 5
+RECOVERY_COOLDOWN = 120
+SOFTWARE_HOURLY_LIMIT = 2
+REST_SECONDS = 60
+
+
 class Monitor:
     def __init__(self, store, state, emit, platform=None, api_factory=ClashAPI, clock=time.time):
         self.store, self.state, self.emit = store, copy.deepcopy(state), emit
@@ -35,6 +41,7 @@ class Monitor:
         self.running = False
         self.engine = None
         self.api = None
+        self.recovery_limit_reason = ""
         self.rest_tun_check = 0.0
         self.rest_deadline = 0.0
         self.session = uuid.uuid4().hex
@@ -61,7 +68,7 @@ class Monitor:
         with self.lock:
             if self.running:
                 raise RuntimeError("请先停止监控再修改连接或参数")
-            for key in ("restart_attempts", "launch_attempts", "unrecovered_restart_count", "recovery_paused", "software_attempts", "recovery_attempts", "tun_restore_pending", "rest_until", "rest_after_tun", "recovery_stage"):
+            for key in ("restart_attempts", "launch_attempts", "unrecovered_restart_count", "recovery_paused", "software_attempts", "recovery_attempts", "tun_restore_pending", "rest_until", "rest_after_tun", "recovery_stage", "recovery_tun_enabled"):
                 candidate[key] = copy.deepcopy(self.state.get(key, default_state().get(key)))
             self.store.save(candidate)
             self.state = candidate
@@ -113,6 +120,7 @@ class Monitor:
             self.monitor_id = uuid.uuid4().hex
             self.running = True
             self.rounds = []
+            self.recovery_limit_reason = ""
             self.app_busy = self.core_busy = self.app_suppress_recovery = False
             self.missing_since = self.last_app_observation = None
             self.last_app_state = ""
@@ -179,6 +187,48 @@ class Monitor:
         self.state["unrecovered_restart_count"] = ledger["unrecovered_restart_count"]
         self.store.save(self.state)
 
+    def update_recovery(self, **changes):
+        """Commit a state transition before publishing it to other workers."""
+        with self.lock:
+            candidate = copy.deepcopy(self.state)
+            candidate.update(changes)
+            self.store.save(candidate)
+            self.state = candidate
+
+    def set_recovery_stage(self, text):
+        self.update_recovery(recovery_stage=text)
+        self.emit("recovery", text)
+        self.log("recovery_stage " + text)
+
+    def enter_rest(self):
+        with self.lock:
+            self.update_recovery(rest_until=self.clock()+REST_SECONDS,
+                                 rest_after_tun=False, tun_restore_pending=False,
+                                 recovery_stage="监控休息 60 秒")
+            self.rest_deadline = time.monotonic()+REST_SECONDS
+            self.rest_tun_check = 0
+        self.emit("recovery", "监控休息 60 秒")
+
+    def finish_rest(self, now):
+        with self.lock:
+            self.update_recovery(rest_until=0, recovery_stage="")
+            self.engine.reset_diagnostics(now)
+            self.next_poll = 0
+            self.rest_deadline = 0
+        self.emit("recovery", "")
+
+    def reserve_software_restart(self):
+        with self.lock:
+            now = self.clock()
+            attempts = [t for t in self.state.get("software_attempts", []) if t > now-3600]
+            if len(attempts) >= SOFTWARE_HOURLY_LIMIT:
+                self.recovery_limit_reason = f"软件重启额度已用完（每小时 {SOFTWARE_HOURLY_LIMIT} 次），继续诊断"
+                self.emit("notice", self.recovery_limit_reason)
+                return False
+            self.recovery_limit_reason = ""
+            self.update_recovery(software_attempts=attempts+[now])
+            return True
+
     def _snapshot(self, message=""):
         with self.lock:
             if not self.engine or not self.running:
@@ -199,6 +249,7 @@ class Monitor:
                 "partial": sum(r[1] == "partial" for r in self.rounds),
                 "failed": sum(r[1] == "failure" for r in self.rounds),
                 "message": message,
+                "recovery_limit": self.recovery_limit_reason,
             })
 
     def _on_probe(self, probe, index):
@@ -233,47 +284,50 @@ class Monitor:
 
     def _network_tick(self, now):
         if self.state.get("tun_restore_pending"):
-            self.emit("recovery", "等待 TUN 恢复")
+            self.emit("recovery", "等待 Clash / TUN 恢复")
             try:
-                self.platform.set_tun(True, self.cancel)
-                if not self.api.tun_enabled(self.cancel):
+                # Keep the process supervisor free to relaunch a missing GUI.
+                if self.platform.inspect_app().state != "running":
+                    self.cancel.wait(.3)
                     return
-                self.state["tun_restore_pending"] = False
-                if self.state.pop("rest_after_tun", False):
-                    self.state["rest_until"] = self.clock()+60
-                    self.rest_deadline = time.monotonic()+60
-                self.store.save(self.state)
-            except Exception:
+                desired = self.state.get("recovery_tun_enabled", True)
+                self.platform.set_tun(desired, self.cancel)
+                if self.api.tun_enabled(self.cancel) != desired:
+                    return
+                with self.lock:
+                    self._ensure_active()
+                    if self.state.get("rest_after_tun"):
+                        self.enter_rest()
+                    else:
+                        self.update_recovery(tun_restore_pending=False, recovery_stage="")
+                        self.emit("recovery", "")
+            except (Cancelled, PlatformCancelled):
+                raise
+            except Exception as exc:
+                self.log("等待恢复：" + str(exc))
                 self.cancel.wait(2)
                 return
         if self.state.get("rest_until", 0):
-            if not self.rest_deadline:
-                self.rest_deadline = time.monotonic()+max(0, min(60, self.state["rest_until"]-now))
-            remaining = self.rest_deadline-time.monotonic()
+            with self.lock:
+                if not self.rest_deadline:
+                    self.rest_deadline = time.monotonic()+max(0, min(REST_SECONDS, self.state["rest_until"]-now))
+                remaining = self.rest_deadline-time.monotonic()
             if remaining > 0:
                 if time.monotonic() >= self.rest_tun_check:
                     self.rest_tun_check = time.monotonic()+5
+                    desired = self.state.get("recovery_tun_enabled", True)
                     try:
-                        tun_on = self.api.tun_enabled(self.cancel)
+                        state_matches = self.api.tun_enabled(self.cancel) == desired
                     except ApiError:
-                        tun_on = False
-                    if not tun_on:
-                        self.state.update(tun_restore_pending=True, rest_after_tun=True, rest_until=0)
-                        self.rest_deadline = 0
-                        self.store.save(self.state)
+                        state_matches = False
+                    if not state_matches:
+                        with self.lock:
+                            self.update_recovery(tun_restore_pending=True, rest_after_tun=True, rest_until=0)
+                            self.rest_deadline = 0
                         return
                 self.emit("recovery", f"监控休息 {int(remaining)+1} 秒")
                 return
-            self.state["rest_until"] = 0
-            self.store.save(self.state)
-            self.engine.consecutive_failures = 0
-            self.engine.grace_until = now
-            self.engine._last_probe_started = None
-            self.engine.last_completed_at = None
-            self.engine._last_unknown = None
-            self.next_poll = 0
-            self.rest_deadline = 0
-            self.emit("recovery", "")
+            self.finish_rest(now)
         with self.lock:
             self._ensure_active()
             token = _Cancellation(self.cancel, self.request_cancel)
@@ -407,13 +461,18 @@ class Monitor:
         if not readiness.available:
             self.next_restart_check = self.clock()+30
             return
-        attempts = [t for t in self.state.get("recovery_attempts", []) if t > self.clock()-3600]
-        if len(attempts) >= 5 or (attempts and self.clock()-attempts[-1] < 120):
-            return
-        self.state["recovery_attempts"] = attempts+[self.clock()]
-        self.store.save(self.state)
         from .recovery import Recovery
         with self.lock:
+            self._ensure_active(token)
+            if not self._core_allowed():
+                return
+            attempts = [t for t in self.state.get("recovery_attempts", []) if t > self.clock()-3600]
+            if len(attempts) >= RECOVERY_HOURLY_LIMIT or (attempts and self.clock()-attempts[-1] < RECOVERY_COOLDOWN):
+                self.recovery_limit_reason = f"等待恢复额度：每小时最多 {RECOVERY_HOURLY_LIMIT} 轮、间隔至少 {RECOVERY_COOLDOWN} 秒；继续诊断"
+                self.emit("notice", self.recovery_limit_reason)
+                return
+            self.recovery_limit_reason = ""
+            self.update_recovery(recovery_attempts=attempts+[self.clock()])
             self.core_busy = True
         try:
             Recovery(self, token, selected).run()
@@ -461,7 +520,7 @@ class Monitor:
                 self.app_suppress_recovery = False
                 self._app_status("disabled", "已关闭" if not self.state["automatic_launch"] else "已停止")
                 return
-            if self.core_busy or self.app_busy or self.state.get("rest_until", 0) or self.state.get("tun_restore_pending"):
+            if self.core_busy or self.app_busy:
                 self.missing_since = self.last_app_observation = None
                 return
             token = _Cancellation(self.cancel, self.app_cancel)
@@ -495,7 +554,7 @@ class Monitor:
             if len(attempts) >= 3 or (attempts and now < attempts[-1]+120):
                 self._app_status("cooldown", "自动启动等待额度 / 2 分钟冷却；仍持续监控")
                 return
-            if self.core_busy or self.app_busy or self.state.get("rest_until", 0) or self.state.get("tun_restore_pending"):
+            if self.core_busy or self.app_busy:
                 return
             self.app_busy = True
             self.state["launch_attempts"] = attempts+[now]

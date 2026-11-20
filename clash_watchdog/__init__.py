@@ -1,3 +1,3 @@
-"""Clash Verge Watchdog: Ubuntu desktop edition of the 1.3.3 release line."""
+"""Clash Verge Watchdog: Ubuntu desktop edition of the 1.3.4 release line."""
 
-__version__ = "1.3.3"
+__version__ = "1.3.4"

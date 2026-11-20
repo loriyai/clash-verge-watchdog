@@ -16,7 +16,7 @@ import threading
 def default_state():
     return {
         "software_attempts": [], "recovery_attempts": [], "tun_restore_pending": False,
-        "rest_after_tun": False, "rest_until": 0, "recovery_stage": "",
+        "recovery_tun_enabled": True, "rest_after_tun": False, "rest_until": 0, "recovery_stage": "",
         "schema": 1, "controller": "http://127.0.0.1:9097", "secret": "",
         "group": "GLOBAL", "test_url": "https://www.gstatic.com/generate_204",
         "executable": "", "config_directory": "", "automatic_restart": True,
@@ -77,7 +77,7 @@ class Store:
                         not math.isfinite(v) or v < 0 for v in entries
                     ):
                         raise ValueError("启动/重启次数记录不完整或损坏；不会自动重置")
-                for key in ("automatic_restart", "automatic_launch", "recovery_paused", "tun_restore_pending", "rest_after_tun"):
+                for key in ("automatic_restart", "automatic_launch", "recovery_paused", "tun_restore_pending", "rest_after_tun", "recovery_tun_enabled"):
                     if key in raw and type(raw[key]) is not bool:
                         raise ValueError("配置中的开关格式错误")
                 rest_until = raw.get("rest_until", 0)

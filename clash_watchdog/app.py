@@ -60,8 +60,10 @@ class Window:
         self.recovery_status = ""
         self.health = None
         root.title(f"Clash Verge 监控器 · Ubuntu {__version__}")
-        root.geometry("1040x850")
-        root.minsize(940, 760)
+        width = min(1040, max(480, root.winfo_screenwidth()-80))
+        height = min(820, max(360, root.winfo_screenheight()-100))
+        root.geometry(f"{width}x{height}")
+        root.minsize(480, 360)
         root.configure(bg="#f5f7fb")
         style = ttk.Style(root)
         style.theme_use("clam")
@@ -82,10 +84,15 @@ class Window:
         self.subtitle.pack(fill="x", pady=(5, 0))
         notebook = ttk.Notebook(root)
         notebook.pack(fill="both", expand=True, padx=12, pady=10)
-        main = ttk.Frame(notebook, padding=16)
-        setup = ttk.Frame(notebook, padding=20)
-        notebook.add(main, text="监控")
-        notebook.add(setup, text="连接设置 / 使用说明")
+        self.pages = []
+        main = self.scroll_page(notebook, "监控")
+        setup = self.scroll_page(notebook, "连接设置 / 使用说明")
+        self.header.bind("<Configure>", lambda e: (
+            self.title.configure(wraplength=max(200,e.width-44)),
+            self.subtitle.configure(wraplength=max(200,e.width-44))))
+        root.bind("<MouseWheel>", self.scroll_wheel)
+        root.bind("<Button-4>", self.scroll_wheel)
+        root.bind("<Button-5>", self.scroll_wheel)
         main.columnconfigure(1, weight=1)
         main.columnconfigure(3, weight=1)
         main.rowconfigure(10, weight=1)
@@ -111,8 +118,11 @@ class Window:
         self.stop_button = ttk.Button(actions, text="停止", command=self.stop)
         self.check_button = ttk.Button(actions, text="检查重启入口", command=lambda: self.worker(self.monitor.check_restart))
         self.resume_button = ttk.Button(actions, text="恢复自动重启", command=self.resume)
-        for button in (self.auto_connect_button, self.connect_button, self.start_button, self.stop_button, self.check_button, self.resume_button):
-            button.pack(side="left", padx=(0, 8))
+        for i, button in enumerate((self.auto_connect_button, self.connect_button, self.start_button, self.stop_button, self.check_button, self.resume_button)):
+            button.grid(row=i//3, column=i%3, sticky="ew", padx=(0, 6), pady=3)
+            actions.columnconfigure(i%3, weight=1)
+
+        self.flow_grid(actions, 3)
 
         cards = tk.Frame(main, bg="white", padx=14, pady=10)
         cards.grid(row=4, column=0, columnspan=4, sticky="ew")
@@ -141,27 +151,28 @@ class Window:
                  ("小时重启上限", "hourly_limit", 1, 10)]
         for i, (title, key, minimum, maximum) in enumerate(specs):
             box = ttk.Frame(option_frame)
-            box.grid(row=i//4, column=i%4, sticky="w", padx=(0, 14), pady=4)
+            box.grid(row=i//2, column=i%2, sticky="w", padx=(0, 14), pady=4)
             ttk.Label(box, text=title).pack(side="left")
             variable = tk.StringVar(value=str(state["options"][key]))
             self.option_vars[key] = variable
             spin = ttk.Spinbox(box, textvariable=variable, from_=minimum, to=maximum, width=6)
             spin.pack(side="left", padx=4)
             self.inputs.append(spin)
+        self.flow_grid(option_frame, 2)
         toggles = ttk.Frame(main)
         toggles.grid(row=6, column=0, columnspan=4, sticky="ew", pady=5)
         self.auto_restart = tk.BooleanVar(value=state["automatic_restart"])
         self.auto_launch = tk.BooleanVar(value=state["automatic_launch"])
         restart_check = ttk.Checkbutton(toggles, text="启用自动重启内核", variable=self.auto_restart)
-        restart_check.pack(side="left")
+        restart_check.grid(row=0, column=0, sticky="w")
         self.inputs.append(restart_check)
         ttk.Checkbutton(toggles, text="Clash 退出后自动启动", variable=self.auto_launch,
-                        command=self.change_launch).pack(side="left", padx=12)
+                        command=self.change_launch).grid(row=1, column=0, sticky="w")
         self.login_enabled = tk.BooleanVar(value=autostart.entry_path().is_file())
         self.login_check = ttk.Checkbutton(toggles, text="登录时自动监控（收进托盘）",
                                           variable=self.login_enabled, command=self.change_login)
-        self.login_check.pack(side="left")
-        ttk.Button(toggles, text="打开日志目录", command=self.open_logs).pack(side="right")
+        self.login_check.grid(row=2, column=0, sticky="w")
+        ttk.Button(toggles, text="打开日志目录", command=self.open_logs).grid(row=3, column=0, sticky="w", pady=4)
         ttk.Label(main, text="自动启动默认开启；主动退出 Clash 前先取消开关。最小化可继续监控，托盘可用时关闭窗口可后台监控。",
                   wraplength=930).grid(row=7, column=0, columnspan=4, sticky="w", pady=3)
         ttk.Label(main, text="Ubuntu 通过 Clash 自身的 D-Bus 菜单重启内核；界面缓存与内核历史仅作参考。",
@@ -211,7 +222,60 @@ class Window:
         root.protocol("WM_DELETE_WINDOW", self.hide_or_close)
         self._buttons()
         self.monitor.log(f"session_start version={__version__} platform={host_platform.system()} arch={host_platform.machine()}")
-        root.after(100, self.drain)
+        self.drain_timer = root.after(100, self.drain)
+
+    def flow_grid(self, frame, maximum):
+        previous = None
+        def resize(event):
+            nonlocal previous
+            children = frame.winfo_children()
+            if not children:
+                return
+            unit = max(child.winfo_reqwidth() for child in children)+12
+            columns = max(1, min(maximum, event.width//unit))
+            if columns == previous:
+                return
+            previous = columns
+            for column in range(maximum):
+                frame.columnconfigure(column, weight=1 if column<columns else 0)
+            for i, child in enumerate(children):
+                child.grid_configure(row=i//columns, column=i%columns)
+        frame.bind("<Configure>", resize)
+
+    def scroll_page(self, notebook, title):
+        page = self.ttk.Frame(notebook)
+        notebook.add(page, text=title)
+        page.rowconfigure(0, weight=1)
+        page.columnconfigure(0, weight=1)
+        canvas = self.tk.Canvas(page, highlightthickness=0, bg="#f5f7fb")
+        vertical = self.ttk.Scrollbar(page, orient="vertical", command=canvas.yview)
+        horizontal = self.ttk.Scrollbar(page, orient="horizontal", command=canvas.xview)
+        canvas.configure(yscrollcommand=vertical.set, xscrollcommand=horizontal.set)
+        canvas.grid(row=0, column=0, sticky="nsew")
+        vertical.grid(row=0, column=1, sticky="ns")
+        horizontal.grid(row=1, column=0, sticky="ew")
+        body = self.ttk.Frame(canvas, padding=12)
+        window = canvas.create_window(0, 0, window=body, anchor="nw")
+        def resize(event):
+            canvas.itemconfigure(window, width=max(560, event.width))
+        def content_changed(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+            for child in body.winfo_children():
+                if isinstance(child, self.ttk.Label) and child.cget("wraplength"):
+                    child.configure(wraplength=max(240,body.winfo_width()-32))
+        canvas.bind("<Configure>", resize)
+        body.bind("<Configure>", content_changed)
+        self.pages.append((canvas, body))
+        return body
+
+    def scroll_wheel(self, event):
+        if isinstance(event.widget, (self.tk.Text, self.ttk.Combobox, self.ttk.Spinbox)):
+            return
+        for canvas, body in self.pages:
+            if str(event.widget).startswith(str(canvas)):
+                direction = -1 if getattr(event, "num", None) == 4 or getattr(event, "delta", 0) > 0 else 1
+                canvas.yview_scroll(direction*3, "units")
+                return "break"
 
     def _entry(self, frame, title, key, row, col, span=1, show=None):
         self.ttk.Label(frame, text=title).grid(row=row, column=col, sticky="w", pady=5)
@@ -372,6 +436,7 @@ class Window:
     def drain(self):
         if self.closing:
             return
+        self.root.after_cancel(self.drain_timer)
         for _ in range(200):
             try:
                 event, data = self.events.get_nowait()
@@ -412,7 +477,7 @@ class Window:
             elif event == "app_status":
                 self.labels["app"].configure(text="主程序退出后自动启动："+str(data))
             elif event == "recovery":
-                self.recovery_status = str(data)
+                self.recovery_status = str(data) if self.monitor.running else ""
             elif event == "health":
                 self.health = data
                 if self.monitor.running:
@@ -423,9 +488,12 @@ class Window:
                     self.labels["status"].configure(text=status+countdown)
                     self.labels["failures"].configure(text=f"连续失败：{data['failures']} / {data['threshold']} 轮")
                     self.labels["summary"].configure(text=f"近 15 分钟：{data['rounds']} 轮，部分异常 {data['partial']} 轮，双地址失败 {data['failed']} 轮")
+                    if data.get("recovery_limit"):
+                        self.labels["readiness"].configure(text=data["recovery_limit"])
                     if data["paused"]:
                         self.labels["readiness"].configure(text="自动重启：上次结果不确定，确认 Clash 状态后点击恢复自动重启")
             elif event == "stopped":
+                self.recovery_status = ""
                 self.labels["status"].configure(text="已停止")
                 self.health = None
             elif event == "notice":
@@ -436,7 +504,7 @@ class Window:
                 self.busy = False
             self._buttons()
         self._header()
-        self.root.after(200, self.drain)
+        self.drain_timer = self.root.after(200, self.drain)
 
     def show(self):
         if self.tray:
@@ -453,6 +521,7 @@ class Window:
 
     def close(self):
         self.closing = True
+        self.root.after_cancel(self.drain_timer)
         if self.tray:
             self.tray.close()
         self.lifetime_cancel.set()

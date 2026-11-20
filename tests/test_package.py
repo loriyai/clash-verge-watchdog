@@ -89,7 +89,7 @@ class PackageTests(unittest.TestCase):
     def test_control_declares_all_architecture_and_ubuntu_runtime_dependencies(self):
         control = self.control["control"][1].decode("utf-8")
         self.assertIn("Package: clash-verge-watchdog\n", control)
-        self.assertIn("Version: 1.3.3\n", control)
+        self.assertIn("Version: 1.3.4\n", control)
         self.assertIn("Architecture: all\n", control)
         self.assertIn("Depends: python3 (>= 3.10), python3-tk, python3-gi, gir1.2-glib-2.0, gir1.2-ayatanaappindicator3-0.1\n", control)
         self.assertIn("Recommends: xdg-utils, fonts-noto-cjk\n", control)

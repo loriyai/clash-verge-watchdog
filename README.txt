@@ -1,23 +1,23 @@
-Clash Verge 监控器 1.3.3 · Ubuntu 版
-应用版本：1.3.3
-安装包修订：1.3.3（支持 Ubuntu 服务模式与一键配置连接）
+Clash Verge 监控器 1.3.4 · Ubuntu 版
+应用版本：1.3.4
+安装包修订：1.3.4（支持 Ubuntu 服务模式与一键配置连接）
 目标系统：Ubuntu 26.04 桌面版 ARM64
 发布日期：2026-11-14
 
 一、安装与打开
 
-推荐分享包：ClashVergeWatchdog-v1.3.3-Ubuntu-ARM64-Share.zip
-右键解压分享ZIP，打开解压后的文件夹，双击 clash-verge-watchdog_1.3.3_all.deb。
+推荐分享包：ClashVergeWatchdog-v1.3.4-Ubuntu-ARM64-Share.zip
+右键解压分享ZIP，打开解压后的文件夹，双击 clash-verge-watchdog_1.3.4_all.deb。
 在Ubuntu“应用中心 / App Center”点击“安装”，按系统提示输入账户密码并等待完成。
 如果双击打开了压缩包管理器，请右键.deb →“打开方式 / 使用其他应用打开”→“应用中心”。
 只解压外层ZIP，不要解压.deb。正常图形安装无需终端命令、额外脚本或设置可执行权限。
 完整鼠标操作步骤见 QUICKSTART.txt 和 START-HERE.html（分享包内名为“安装说明.txt”和“开始使用.html”）。
 
-安装包：clash-verge-watchdog_1.3.3_all.deb
+安装包：clash-verge-watchdog_1.3.4_all.deb
 文件名中的 all 表示程序本身不包含特定CPU架构的二进制，适用于ARM64；Ubuntu会安装本机ARM64的Python/Tk/GI依赖。
 
 仅供习惯终端的用户：在安装包所在文件夹运行
-sudo apt install ./clash-verge-watchdog_1.3.3_all.deb
+sudo apt install ./clash-verge-watchdog_1.3.4_all.deb
 
 安装完成后，在Ubuntu应用菜单搜索“Clash Verge 监控器”并打开。
 也可以运行：clash-verge-watchdog
@@ -40,7 +40,7 @@ sudo apt install ./clash-verge-watchdog_1.3.3_all.deb
 监控器填写 http://127.0.0.1:9097 和同一密钥。已有其他本机端口可以沿用。
 读取配置按钮只读，不修改YAML、订阅、节点或系统代理。仅支持明确的本机回环地址。
 
-三、保留的1.3.3行为
+三、保留的1.3.4行为
 
 正常测速间隔：30秒。
 失败复测间隔：5秒。
@@ -118,7 +118,7 @@ Clash Verge菜单：https://github.com/clash-verge-rev/clash-verge-rev/blob/v2.5
 Clash Verge配置目录：https://github.com/clash-verge-rev/clash-verge-rev/blob/v2.5.10/src-tauri/src/utils/dirs.rs
 
 
-分级恢复（1.3.3）
+分级恢复（1.3.4）
 连续失败达到阈值后，最多两次 TUN 关闭/开启循环。确认关闭后等待 1 秒再开启，
 确认开启后等待 2 秒进行双地址诊断，失败则在该诊断结束后再等待 2 秒复测。
 仍失败则重启内核，确认就绪后诊断两次；仍失败再进行两次 TUN 循环。

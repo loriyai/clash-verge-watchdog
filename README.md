@@ -1,6 +1,6 @@
-# Clash Verge 监控器 1.3.3
+# Clash Verge 监控器 1.3.4
 
-适用于 Ubuntu 的中文桌面监控器，支持 Clash Verge Rev。仓库仅保留 1.3.3。
+适用于 Ubuntu 的中文桌面监控器，支持 Clash Verge Rev。当前版本为 1.3.4。
 
 ## 功能
 
@@ -14,10 +14,10 @@
 
 ## 安装与升级
 
-下载 [1.3.3 安装包](release/clash-verge-watchdog_1.3.3_all.deb)，在文件所在目录运行：
+下载 [1.3.4 安装包](release/clash-verge-watchdog_1.3.4_all.deb)，在文件所在目录运行：
 
 ~~~bash
-sudo apt install ./clash-verge-watchdog_1.3.3_all.deb
+sudo apt install ./clash-verge-watchdog_1.3.4_all.deb
 ~~~
 
 升级前从托盘退出监控器。已有 deb 安装可以直接升级，设置位于
@@ -50,3 +50,14 @@ python3 packaging/build_release.py --output dist
 
 连接密钥位于当前用户私有设置目录，设置和日志不应上传或随安装包分享。
 仓库与发行包不包含个人配置、订阅或日志。
+
+
+## 1.3.4 修复
+
+- 等待 TUN 恢复时允许按既有额度拉起已退出的 Clash，解除等待与自动启动互相阻塞。
+- 停止监控立即清理恢复倒计时，忽略停止后迟到的恢复显示事件。
+- 记录恢复前的 TUN 状态；原本关闭时跳过 TUN 循环，重启后恢复关闭状态。
+- 集中管理恢复状态转换与额度，持久化成功后才提交共享状态；公开内核恢复状态机方法。
+- 显示整轮恢复和软件重启额度限制原因。
+
+- 小窗口布局支持滚动，按钮和监控参数按可用宽度换行，初始尺寸适应屏幕。

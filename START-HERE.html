@@ -11,15 +11,15 @@
 </style>
 </head>
 <body><main>
-<header><div class="tag">UBUNTU 26.04 · ARM64 · 1.3.3</div><h1>Clash Verge 监控器</h1><p>解压分享包，双击安装包，按系统提示安装。<br>安装和日常打开，无需输入终端命令。</p></header>
+<header><div class="tag">UBUNTU 26.04 · ARM64 · 1.3.4</div><h1>Clash Verge 监控器</h1><p>解压分享包，双击安装包，按系统提示安装。<br>安装和日常打开，无需输入终端命令。</p></header>
 <section class="card"><h2>先安装，再打开应用</h2><p>适用于带“应用中心 / App Center”的 Ubuntu 桌面版。首次安装请联网，并准备好系统账户密码。</p>
 <ol class="steps">
 <li><div><h3>解压分享 ZIP</h3><p>把压缩包放到 Ubuntu 的“下载”文件夹，右键选择“解压到此处”或“提取到此处”，再打开解压后的文件夹。</p></div></li>
-<li><div><h3>双击 .deb 安装包</h3><p><code>clash-verge-watchdog_1.3.3_all.deb</code></p><p>文件名中的 <code>all</code> 包括 ARM64。不要再解压这个 .deb 文件。</p></div></li>
+<li><div><h3>双击 .deb 安装包</h3><p><code>clash-verge-watchdog_1.3.4_all.deb</code></p><p>文件名中的 <code>all</code> 包括 ARM64。不要再解压这个 .deb 文件。</p></div></li>
 <li><div><h3>在应用中心点击“安装”</h3><p>按系统提示输入账户密码，等待完成。系统会下载缺少的依赖，不需要另外手动安装 Python。</p></div></li>
 <li><div><h3>从应用列表打开监控器</h3><p>点击程序坞的“显示应用”，搜索“Clash Verge 监控器”，点击图标打开。以后直接打开这个图标即可。</p><p>也可以右键运行中的图标，选择“固定到程序坞”或“添加到收藏夹”。</p></div></li>
 </ol><div class="hint"><strong>双击后打开了压缩包管理器？</strong><br>关闭它 → 右键 .deb →“打开方式 / 使用其他应用打开”→“应用中心 / App Center”。不需要运行安装脚本，也不需要勾选“允许作为程序执行”。</div></section>
 <section class="card"><h2>首次连接：在界面上完成</h2><p>先安装并打开 ARM64 版 Clash Verge Rev。本分享包只包含监控器。</p><ol><li>监控器“连接设置 / 使用说明”→“一键配置连接”。</li><li>返回“监控”→ 选择当前代理组。</li><li>点击“检查重启入口”，确认可用后点击“开始监控”。</li></ol><details><summary>提示没有启用外部控制器</summary><p>到 Clash 设置中启用“外部控制器”，地址填 <code>127.0.0.1:9097</code> 并设置密钥；监控器填写 <code>http://127.0.0.1:9097</code> 和同一密钥，然后连接。已有其他本机端口可沿用。</p><p>每台电脑读取自己的配置，不要分享密钥或 settings.json。</p></details><p class="muted">正常30秒测速，失败后5秒复测，连续5轮双地址失败才请求重启。“Clash 退出后自动启动”默认开启。托盘可用时关闭窗口会继续监控；通过托盘菜单打开窗口或退出。灰色表示未监控，绿色正常，黄色等待或需要关注，红色表示双地址测速失败。</p></section>
-<section class="card"><h2>遇到提示时</h2><details><summary>找不到应用中心，或者安装失败</summary><p>先在 Ubuntu 应用列表搜索“应用中心 / App Center”。精简系统、移除过应用中心或其他桌面环境可能没有这个入口，请保留当前提示，让协助安装的人检查。</p><p>下载依赖失败：确认网络后重试。提示包管理器忙：等待系统更新结束。无法通过密码确认：需要该电脑管理员完成安装。</p></details><details><summary>已经安装过上一版</summary><p>先关闭旧监控器，再用应用中心打开新 .deb。若只显示“已安装”而没有更新入口，请保留提示信息供排查。更新包不会清空你的监控设置、日志或重启记录。</p></details><details><summary>怎么分享给其他人</summary><p>直接转发原始 <code>ClashVergeWatchdog-v1.3.3-Ubuntu-ARM64-Share.zip</code>，收件人按本页操作即可。不要另加你的 settings.json、日志、密钥或 Clash 配置。</p></details></section>
-<footer><p>当前应用及安装包版本为 1.3.3。</p><p>已做自动逻辑、模拟接口、包结构及分享包检查；已在 Ubuntu ARM64 验证桌面运行和真实 Clash 恢复；应用中心安装尚未验收。Linux 版使用独立测速与内核历史，暂不读取或覆盖 Clash 窗口的延迟缓存。</p><p>图形安装依据：<a href="https://ubuntu.com/desktop/docs/en/26.04/explanation/snap-and-deb-packages/" rel="noreferrer">Ubuntu 26.04 官方说明</a>。本说明可离线阅读；详细文字步骤见同文件夹“安装说明.txt”。</p></footer>
+<section class="card"><h2>遇到提示时</h2><details><summary>找不到应用中心，或者安装失败</summary><p>先在 Ubuntu 应用列表搜索“应用中心 / App Center”。精简系统、移除过应用中心或其他桌面环境可能没有这个入口，请保留当前提示，让协助安装的人检查。</p><p>下载依赖失败：确认网络后重试。提示包管理器忙：等待系统更新结束。无法通过密码确认：需要该电脑管理员完成安装。</p></details><details><summary>已经安装过上一版</summary><p>先关闭旧监控器，再用应用中心打开新 .deb。若只显示“已安装”而没有更新入口，请保留提示信息供排查。更新包不会清空你的监控设置、日志或重启记录。</p></details><details><summary>怎么分享给其他人</summary><p>直接转发原始 <code>ClashVergeWatchdog-v1.3.4-Ubuntu-ARM64-Share.zip</code>，收件人按本页操作即可。不要另加你的 settings.json、日志、密钥或 Clash 配置。</p></details></section>
+<footer><p>当前应用及安装包版本为 1.3.4。</p><p>已做自动逻辑、模拟接口、包结构及分享包检查；已在 Ubuntu ARM64 验证桌面运行和真实 Clash 恢复；应用中心安装尚未验收。Linux 版使用独立测速与内核历史，暂不读取或覆盖 Clash 窗口的延迟缓存。</p><p>图形安装依据：<a href="https://ubuntu.com/desktop/docs/en/26.04/explanation/snap-and-deb-packages/" rel="noreferrer">Ubuntu 26.04 官方说明</a>。本说明可离线阅读；详细文字步骤见同文件夹“安装说明.txt”。</p></footer>
 </main></body></html>

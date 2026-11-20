@@ -21,9 +21,9 @@ import zipfile
 
 
 PACKAGE = "clash-verge-watchdog"
-VERSION = "1.3.3"
+VERSION = "1.3.4"
 SHARE_ROOT = "ClashVergeWatchdog-Ubuntu-ARM64"
-SHARE_ARCHIVE = "ClashVergeWatchdog-v1.3.3-Ubuntu-ARM64-Share.zip"
+SHARE_ARCHIVE = "ClashVergeWatchdog-v1.3.4-Ubuntu-ARM64-Share.zip"
 DEFAULT_EPOCH = int(datetime(2026, 11, 14, tzinfo=timezone.utc).timestamp())
 MODULES = ("__init__.py", "__main__.py", "api.py", "app.py", "controller.py",
            "engine.py", "platform_linux.py", "store.py", "tray.py", "autostart.py", "recovery.py")

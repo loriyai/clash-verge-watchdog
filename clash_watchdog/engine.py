@@ -280,6 +280,27 @@ class WatchdogEngine:
         self.recovery_paused = len(self._attempts) >= self.options.hourly_limit
         return "ready"
 
+    def record_recovery_restart(self, now: float) -> str:
+        """Reserve a restart inside an already authorized recovery cycle."""
+        now = _timestamp(now)
+        self._prune_attempts(now)
+        if self.recovery_paused:
+            return "hourly_limit"
+        if self._last_attempt is not None and now < self._last_attempt + self.effective_cooldown:
+            return "cooldown"
+        self._attempts.append(now)
+        self._last_attempt = now
+        self.unrecovered_restart_count += 1
+        self.mark_unknown(now, "内核恢复期间等待诊断")
+        return "ready"
+
+    def reset_diagnostics(self, now: float) -> None:
+        self._reset_context(_timestamp(now))
+        self.grace_until = now
+
+    def finish_recovery(self) -> None:
+        self.consecutive_failures = 0
+
     def resume_recovery(self, now: float) -> bool:
         """Quota expiry is automatic. This never bypasses cooldown or the hourly cap."""
         self._prune_attempts(_timestamp(now))

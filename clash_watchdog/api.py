@@ -360,7 +360,7 @@ class ClashAPI:
             _check_cancel(cancel)
             if time.monotonic() >= deadline:
                 raise ApiError("controller", "本机控制接口响应超时；不计为节点故障。")
-            headers = {"Accept": "application/json", "Connection": "close", "User-Agent": "ClashVergeWatchdog/1.3.3-Ubuntu"}
+            headers = {"Accept": "application/json", "Connection": "close", "User-Agent": "ClashVergeWatchdog/1.3.4-Ubuntu"}
             if self._secret:
                 headers["Authorization"] = "Bearer " + self._secret
             connection.request("GET", path, headers=headers)

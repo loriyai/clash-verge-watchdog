@@ -110,6 +110,31 @@ class WindowTests(unittest.TestCase):
             self.assertEqual(app.header.cget("background"), app.GREEN)
             self.assertEqual(app.monitor.state["restart_attempts"], [])
 
+    def test_stop_during_rest_clears_recovery_display(self):
+        with self.window() as app:
+            app.monitor.running = True
+            app.recovery_status = "监控休息 43 秒"
+            app.stop()
+            app.events.put(("recovery", "监控休息 42 秒"))
+            app.drain()
+            self.assertEqual("", app.recovery_status)
+            self.assertEqual(app.NAVY, app.header.cget("background"))
+            self.assertEqual("已停止", app.labels["status"].cget("text"))
+
+    def test_small_window_pages_scroll_to_bottom(self):
+        with self.window() as app:
+            app.root.geometry("640x480")
+            app.root.deiconify()
+            app.root.update()
+            for canvas, body in app.pages:
+                notebook = canvas.master.master
+                notebook.select(canvas.master)
+                app.root.update()
+                canvas.yview_moveto(1)
+                app.root.update()
+                self.assertGreaterEqual(canvas.yview()[1], .99)
+                self.assertGreater(canvas.winfo_height(), 100)
+
     def test_close_cancels_pending_manual_launch(self):
         with self.window() as app:
             entered, release, completed = threading.Event(), threading.Event(), threading.Event()
